@@ -20,7 +20,7 @@ servo_mid_point_steps = servo_mid_point_ms * steps_per_ms
 def convert_degrees_to_steps(position): 
     return int(servo_mid_point_steps + (position * steps_per_degree))
 
-servo_channels = (0,)
+servo_channels = (0, 2, 4)
 
 def turn_off_servos():
     for channel in servo_channels:
