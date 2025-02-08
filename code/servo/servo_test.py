@@ -1,5 +1,6 @@
 from Raspi_MotorHAT.Raspi_PWM_Servo_Driver import PWM 
 import atexit
+import time
 
 pwm = PWM(0x40)
 
@@ -21,6 +22,7 @@ def convert_degrees_to_steps(position):
     return int(servo_mid_point_steps + (position * steps_per_degree))
 
 servo_channels = (0, 2, 4)
+current_positions = [0, 0, 0]
 
 def turn_off_servos():
     for channel in servo_channels:
@@ -28,12 +30,35 @@ def turn_off_servos():
 
 atexit.register(turn_off_servos)
 
+def move_servo_slowly(channel, start_position, end_position, step_delay=0.01):
+    start_step = convert_degrees_to_steps(start_position)
+    end_step = convert_degrees_to_steps(end_position)
+    step = 1 if end_step > start_step else -1
 
-# atexit.register(pwm.setPWM, 0, 0, 4096)
+    for position in range(start_step, end_step, step):
+        pwm.setPWM(channel, 0, position)
+        time.sleep(step_delay)
+    pwm.setPWM(channel, 0, end_step)
+
+for channel in servo_channels:
+    end_step = convert_degrees_to_steps(0)
+    pwm.setPWM(channel, 0, end_step)
+
 
 
 while True: 
-    position = int(input("Type your position in degrees (90 to -90, 0 is middle): "))
-    for channel in servo_channels:
-        end_step = convert_degrees_to_steps(position)
-        pwm.setPWM(channel, 0, end_step)
+    joint = int(input("select J"))
+    if joint >= 1 and joint <= 3:
+        position = int(input("select P"))
+        if position >= -89 and position <= 89:
+            move_servo_slowly(servo_channels[joint - 1], current_positions[joint-1], position)
+            current_positions[joint-1] = position
+        else:
+            print("Invalid P")
+    else:
+        print("Invalid J")
+    print("done")
+    # position = int(input("Type your position in degrees (90 to -90, 0 is middle): "))
+    # for channel in servo_channels:
+    #     end_step = convert_degrees_to_steps(position)
+    #     pwm.setPWM(channel, 0, end_step)
