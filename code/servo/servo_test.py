@@ -1,6 +1,8 @@
 from Raspi_MotorHAT.Raspi_PWM_Servo_Driver import PWM 
 import atexit
 from time import sleep
+from sshkeyboard import listen_keyboard
+
 
 pwm = PWM(0x40)
 
@@ -22,7 +24,10 @@ def convert_degrees_to_steps(position):
     return int(servo_mid_point_steps + (position * steps_per_degree))
 
 servo_channels = (0, 2, 4)
+
+global current_positions
 current_positions = [0, 0, 0]
+
 
 def turn_off_servos():
     for channel in servo_channels:
@@ -53,7 +58,7 @@ def go_home():
     for channel in servo_channels:
         end_step = convert_degrees_to_steps(0)
         pwm.setPWM(channel, 0, end_step)
-
+    global current_positions
     current_positions = [0, 0, 0]
 
 
@@ -72,7 +77,7 @@ print("-----------------")
 
 
 while True: 
-    choice = int(input(("1.\tTest single joints\n2.\tCreate point to point program.\n3.\tHome\nInput 'b' at any time to go back\n> ")))
+    choice = int(input(("1.\tTest single joints\n2.\tCreate point to point program.\n3.\tHome\n4.\JOG\nInput 'b' at any time to go back\n> ")))
     if choice == 1:
         print("Test single joints")
         print("-----------------")
@@ -159,6 +164,43 @@ while True:
                         pwm.setPWM(servo_channels[index], 0, end_step)
                     current_positions = position
                     sleep(1)
+    elif choice == 4:
+        print("JOG")
+        choice = int(input("which joint\n> "))
+        
+        def jog_servo(channel, direction, step_size=1):
+            global current_positions
+            new_position = current_positions[channel] + (step_size * direction)
+            if not is_stroke_end(new_position):
+                move_servo_slowly(servo_channels[channel], current_positions[channel], new_position)
+                current_positions[channel] = new_position
+
+        print("Hold 'up' or 'down' arrow keys to jog the servo. Release to stop. Press 'esc' to exit jog mode.")
+        
+        jog_active = True
+
+        def on_press(key):
+            global jog_active
+            if key == "up":
+                jog_active = True
+                while jog_active:
+                    jog_servo(choice - 1, 1)
+                    sleep(0.01)  # Increase check frequency
+            elif key == "down":
+                jog_active = True
+                while jog_active:
+                    jog_servo(choice - 1, -1)
+                    sleep(0.01)  # Increase check frequency
+            elif key == "esc":
+                jog_active = False
+            return False
+
+        def on_release(key):
+            global jog_active
+            if key in ["up", "down"]:
+                jog_active = False
+
+        listen_keyboard(on_press=on_press, on_release=on_release)
             
     elif choice == 3:
         go_home()
