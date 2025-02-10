@@ -1,7 +1,7 @@
 import os
 import time
 from Raspi_MotorHAT.Raspi_PWM_Servo_Driver import PWM 
-from servos import Servos
+# from servos import Servos
 from time import sleep
 
 import atexit
@@ -25,40 +25,62 @@ J1_CH = 0
 J2_CH = 2
 J3_CH = 4
 
+HOME_J1 = 0
+HOME_J2 = -50
+HOME_J3 = 50
+
 def convert_absolute_degrees_to_steps(position): 
     return int(SERVO_MID_POINT_STEPS + (position * STEPS_PER_DEGREE))
 
-
-
+# JOINT
+# IS
+# A
+# STRING!!
 
 class Robot:
 
     def __init__(self, pwm_addr=PWM_ADDR):
         self._pwm = PWM(pwm_addr)
+        # TODO make a class ASAP
         self.joints = {
-            'j1': J1_CH,
-            'j2': J2_CH,
-            'j3': J3_CH
+            'j1': {'name': 'J1', 'channel': J1_CH, 'current_position': 0},
+            'j2': {'name': 'J2', 'channel': J2_CH, 'current_position': 0},
+            'j3': {'name': 'J3', 'channel': J3_CH, 'current_position': 0},
         }
-        self.current_joint_positions = {
-            'j1': 0,
-            'j2': 0,
-            'j3': 0
-        }
+        # self.current_joint_positions = {
+        #     'j1': 0,
+        #     'j2': 0,
+        #     'j3': 0
+        # }
         self._pwm.setPWMFreq(PWM_FREQUENCY)
         self.incremental_jog = None
         self.is_incremental_jog = False
         self.gen_ovr = 0.01 # tweak this shit
+        
         # self.servos = Servos(addr=pwm_addr)
+        self.active_joint = None
         
         atexit.register(self.stop_all)
 
+    # sort this shit out
+    def joint_selection(self, choice):
+        if choice == "1":
+            joint = 'j1'
+        elif choice == "2":
+            joint = 'j2'
+        elif choice == "3":
+            joint = 'j3'
+        return joint       
+
+    def set_active_joint(self, joint):
+        self.active_joint = joint
+
     def get_joint_channel(self, joint):
-        return self.joints[joint]
+        return self.joints[joint]['channel']
 
     def stop_all_servos(self):
-        for channel in self.joints.values():
-            self._pwm.setPWM(channel, 0, 4096)        
+        for joint in self.joints.values():
+            self._pwm.setPWM(joint['channel'], 0, 4096)        
 
     def stop_all(self): 
         self.stop_all_servos() 
@@ -66,14 +88,20 @@ class Robot:
         # self.leds.show()
 
     def go_home(self):
-        pass
+        # STUPID
+        self._pwm.setPWM(self.joints['j1']['channel'], 0, convert_absolute_degrees_to_steps(HOME_J1))
+        self.joints['j1']['current_position'] = HOME_J1
+        self._pwm.setPWM(self.joints['j2']['channel'], 0, convert_absolute_degrees_to_steps(HOME_J2))
+        self.joints['j2']['current_position'] = HOME_J2
+        self._pwm.setPWM(self.joints['j3']['channel'], 0, convert_absolute_degrees_to_steps(HOME_J3))
+        self.joints['j3']['current_position'] = HOME_J3
 
     def go_ready(self):
         pass
 
     def show_current_positions(self):
-        for joint, value in self.current_joint_positions:
-            print(f"{joint}\t{value}")
+        for joint in self.joints.values():
+            print(f"{joint['name']}\t{joint['current_position']}")
 
     def set_gen_ovr(self, value):
         if 0 < value <= 100:
@@ -87,25 +115,30 @@ class Robot:
 
     def go_zero(self):
         for joint in self.joints.values():
-            self.move_joint_absolute(joint, 0)
+            self._pwm.setPWM(joint['channel'], 0, convert_absolute_degrees_to_steps(0))
+            joint['current_position'] = 0
 
     # def move_joint_absolute(self, joint, position):
     #     self._pwm.setPWM(self.get_joint_channel(joint), 0, position)
     #     self.current_joint_positions[joint] = position
 
-    def move_joint_absolute(self, joint, end_position):
-        current_position = self.current_joint_positions[joint]
+    def move_joint_relative(self, joint, end_position):
+        if self.stroke_end(end_position):
+            print("STROKE END")
+            return
+        current_position = self.joints[joint]['current_position']
+
         
         start_step = convert_absolute_degrees_to_steps(current_position)
         end_step = convert_absolute_degrees_to_steps(end_position)
         step = 1 if end_step > start_step else -1
 
         for position in range(start_step, end_step, step):
-            self._pwm.setPWM(joint, 0, position)
+            self._pwm.setPWM(self.get_joint_channel(joint), 0, position)
             sleep(self.gen_ovr)
-        self._pwm.setPWM(joint, 0, end_step)
+        self._pwm.setPWM(self.get_joint_channel(joint), 0, end_step)
 
-        self.current_joint_positions[joint] = end_position
+        self.joints[joint]['current_position'] = end_position
 
     # def toggle_incremental_jog(self):
     #     self.is_incremental_jog = not self.is_incremental_jog
@@ -119,20 +152,22 @@ class Robot:
         print(f"INCR_JOG IS {self.incremental_jog}")
 
     def show_status(self):
+        print(f"ACTIVE JOINT IS {self.active_joint}")
         print(f"INCR_JOG IS {self.incremental_jog}")
-        print(f"GEN_OVR IS {self.gen_ovr}%")
+        print(f"GEN_OVR IS 100%") # USELESS
+        # print(f"GEN_OVR IS {self.gen_ovr}%")
         self.show_current_positions()
 
     def move_joint_incremental(self, joint, direction):
-        current_position = self.current_joint_positions[joint]
+        current_position = self.joints[joint]['current_position']
         new_position = current_position + direction * self.incremental_jog
-        if self.stroke_end(new_position):
-            print("STROKE END")
-            return
-        self.move_joint_absolute(joint, new_position)
+        self.move_joint_relative(joint, new_position)
 
     def stroke_end(self, value):
         return value < -89 or value > 89
+    
+    def set_active_joint(self, joint):
+        self.active_joint = joint
 
     # def convert_speed(self, speed):
     #     mode = Raspi_MotorHAT.RELEASE
