@@ -6,7 +6,10 @@ from time import sleep
 
 import atexit
 
-
+# GENERAL TODO
+# - use keyword parameters
+# - use type hinting
+# - proper error handling
 
 
 PWM_ADDR = 0x40
