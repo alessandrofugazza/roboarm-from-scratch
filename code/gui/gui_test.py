@@ -10,12 +10,8 @@ client = None
 def establish_connection():
     # TODO globals are BAD
     global client
-    # HOSTNAME = "a3a.local"
     PORT = 22
-    # USERNAME = "shell"
-    # PASSWORD = "pain"
     HOSTNAME = os.getenv("A3A_HOSTNAME")
-    
     USERNAME = os.getenv("A3A_USERNAME")
     PASSWORD = os.getenv("A3A_PASSWORD")
 
