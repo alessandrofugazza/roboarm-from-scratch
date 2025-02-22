@@ -1,3 +1,5 @@
 ~$*
 *.stl
 .env
+**/__pycache__/
+*.pyc
