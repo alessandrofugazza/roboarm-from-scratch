@@ -83,7 +83,7 @@ class Robot:
             HOME_J3
         )
         self._pwm.setPWMFreq(PWM_FREQUENCY)
-        self.incremental_jog = None
+        self.incremental_jog = 10
         self.is_incremental_jog = False
         self.gen_ovr = 0.1 # tweak this shit
         

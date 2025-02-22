@@ -21,8 +21,8 @@ servo_mid_point_steps = servo_mid_point_ms * steps_per_ms
 def convert_degrees_to_steps(position): 
     return int(servo_mid_point_steps + (position * steps_per_degree))
 
-servo_channels = [13, 15]
-# servo_channels = [0, 2]
+# servo_channels = [13, 15]
+servo_channels = [0]
 
 def turn_off_servos():
     # pwm.setPWM(servo_channel, 0, 4096)
@@ -35,7 +35,7 @@ atexit.register(turn_off_servos)
 # atexit.register(pwm.setPWM, 0, 0, 4096)
 
 
-target_positions = [0, 0]
+target_positions = [0]
 
 step_delay = 0.01
 
