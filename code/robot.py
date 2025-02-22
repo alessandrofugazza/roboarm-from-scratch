@@ -88,6 +88,9 @@ class Robot:
         self.gen_ovr = 0.1 # tweak this shit
         
         # self.servos = Servos(addr=pwm_addr)
+
+        for channel in self.joint_channels:
+            self._pwm.setPWM(channel, 0, convert_absolute_degrees_to_steps(0))
         
         atexit.register(self.stop_all)
 
@@ -198,40 +201,33 @@ class Robot:
     def joint_movement(self, target_positions):
         print("JOINT MOVEMENT")
         print_separator()
-        step_deltas = []
+
+        DEGREES_PER_STEP = 2
+        diffs = []
+        for i in range(len(self.joint_channels)):
+            diffs.append(abs(target_positions[i] - self.current_joint_positions[i]))
+
+        steps_needed = max(diffs) / DEGREES_PER_STEP
+
+        deg_steps = []
+
+        for i in range(len(self.joint_channels)):
+            deg_steps.append((diffs[i] / steps_needed))
+
         directions = []
 
-        for i, target_position in enumerate(target_positions):
-            delta = convert_absolute_degrees_to_steps(target_position) - convert_absolute_degrees_to_steps(self.current_joint_positions[i])
-            step_deltas.append(abs(delta))
-            directions.append(1 if delta > 0 else -1)
-        
-        max_steps = max(step_deltas)
-        steps_distro = []
-        floating_steps_counter = self.current_joint_positions.copy()
-        steps_increments = []
-        for i, step in enumerate(step_deltas):
-            steps_increments.append(step/max_steps)
-        # print(steps_increments)
-        # for i, step in enumerate(step_deltas):
-        #     current_step = convert_absolute_degrees_to_steps(self.current_joint_positions[i])
-        #     target_step = convert_absolute_degrees_to_steps(target_positions[i])
-        #     steps_distro.append(list(range(current_step, target_step, directions[i] * int(round(step_deltas[i]/max_steps)))))
+        for i in range(len(self.joint_channels)):
+            directions.append(1 if target_positions[i] > self.current_joint_positions[i] else -1)
 
-        for step in range(max_steps):
-            for i, channel in enumerate(self.joint_channels):
-                target_floating_step = floating_steps_counter[i] + steps_increments[i] * directions[i]
-                if int(target_floating_step) != int(floating_steps_counter[i]):
-                    self._pwm.setPWM(channel, 0, int(floating_steps_counter[i]))
-                    # self.current_joint_positions[i] = convert_steps_to_absolute_degrees(steps_distro[i][step])
-                floating_steps_counter[i] += steps_increments[i] * directions[i]
-
+        for _ in range(int(steps_needed)):
+            for index in range(len(self.joint_channels)):
+                self.current_joint_positions[index] += deg_steps[index] * directions[index]
+                self._pwm.setPWM(self.joint_channels[index], 0, convert_absolute_degrees_to_steps(self.current_joint_positions[index]))
             sleep(self.gen_ovr)
 
-        for i, channel in enumerate(self.joint_channels):
-            pwm_value = convert_absolute_degrees_to_steps(target_positions[i])
-            self._pwm.setPWM(channel, 0, pwm_value)
-            self.current_joint_positions[i] = target_positions[i]
+        for index in range(len(self.joint_channels)):
+            self._pwm.setPWM(self.joint_channels[index], 0, convert_absolute_degrees_to_steps(target_positions[index]))
+        
         print_done()
         self.show_current_positions()
 
