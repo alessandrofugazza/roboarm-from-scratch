@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from Raspi_MotorHAT.Raspi_PWM_Servo_Driver import PWM 
@@ -30,7 +31,7 @@ J2_CH = 2
 J3_CH = 4
 
 HOME_J1 = 0
-HOME_J2 = -50
+HOME_J2 = -48
 HOME_J3 = 50
 
 def convert_absolute_degrees_to_steps(position): 
@@ -66,11 +67,7 @@ class Robot:
             J2_CH,
             J3_CH
         )
-        self.current_joint_positions = [
-            0,
-            0,
-            0
-        ]
+        
         self.active_joint = {
             'name': None,
             'index': None,
@@ -89,8 +86,14 @@ class Robot:
         
         # self.servos = Servos(addr=pwm_addr)
 
-        for channel in self.joint_channels:
-            self._pwm.setPWM(channel, 0, convert_absolute_degrees_to_steps(0))
+        for i, _ in enumerate(self.joint_channels):
+            self._pwm.setPWM(self.joint_channels[i], 0, convert_absolute_degrees_to_steps(self.home_joint_values[i]))
+
+        self.current_joint_positions = [
+            self.home_joint_values[0],
+            self.home_joint_values[1],
+            self.home_joint_values[2]
+        ]
         
         atexit.register(self.stop_all)
 
@@ -250,6 +253,15 @@ class Robot:
         # print(f"GEN_OVR IS 100%") # USELESS
         # print(f"GEN_OVR IS {self.gen_ovr}%")
         self.show_current_positions()
+
+    def return_status(self):
+        return json.dumps({
+            'incremental_jog': self.incremental_jog,
+            'j1': self.current_joint_positions[0],
+            'j2': self.current_joint_positions[1],
+            'j3': self.current_joint_positions[2]
+        })
+
 
     def move_joint_incremental(self, joint, direction):
         print("MOVING JOINT INCREMENTAL")
