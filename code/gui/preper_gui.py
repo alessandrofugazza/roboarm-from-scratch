@@ -14,22 +14,19 @@ ssh_manager = SSHClientManager()
 root = tk.Tk()
 root.title("A3A")
 
-incremental_jog = tk.StringVar()
-
-
+incremental_jog = tk.StringVar(value="10") # get this from a3a
 
 incremental_jog_label = ttk.Label(root, text="Incremental Jog: ")
 incremental_jog_label.pack()
 incremental_jog_entry = ttk.Entry(root, width=2, textvariable=incremental_jog)
 incremental_jog_entry.pack()
 
-# this whole thing is ugly as sin
+execute_button = ttk.Button(root, text="Update Incremental Jog", command=lambda: ssh_manager.send_command(f'a3a.set_incremental_jog({incremental_jog.get()})'))
+execute_button.pack()
 
 execute_button = ttk.Button(root, text="STATUS", command=lambda: ssh_manager.send_command('a3a.show_status()'))
 execute_button.pack()
 
-execute_button = ttk.Button(root, text="Update Incremental Jog", command=lambda: ssh_manager.send_command(f'a3a.set_incremental_jog({incremental_jog.get()})'))
-execute_button.pack()
 
 
 execute_button = ttk.Button(root, text=f"J1 -{incremental_jog.get()}", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(0, -1)'))
