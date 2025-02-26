@@ -26,15 +26,15 @@ def update_status_gui():
         sleep(0.1)
         status = ssh_manager.get_data("a3a.return_status()") 
     
-
     if status:
-        incremental_jog.set(status.get('incremental_jog', 'N/A'))
+        # incremental_jog.set(status.get('incremental_jog', 'N/A'))
         j1_position.set(status.get('j1', 'N/A'))
         j2_position.set(status.get('j2', 'N/A'))
         j3_position.set(status.get('j3', 'N/A'))
-        # shitty_joint_positions.set(status)
     else:
         print("No status received.")
+    
+      # Schedule the function to run again after 500ms
 
 
 incremental_jog = tk.StringVar(value="10") # get this from a3a
@@ -81,7 +81,13 @@ for i, joint in enumerate(['J1', 'J2', 'J3'], start=1):
 execute_button = ttk.Button(root, text="Update Incremental Jog", command=lambda: ssh_manager.send_command(f'a3a.set_incremental_jog({incremental_jog.get()})'))
 execute_button.pack()
 
-execute_button = ttk.Button(root, text="STATUS", command=update_status_gui)
+def start_updating():
+    while True:
+        update_status_gui()
+        sleep(0.1)
+
+# LEARN THREADING
+execute_button = ttk.Button(root, text="STATUS", command=lambda: threading.Thread(target=start_updating, daemon=True).start())
 execute_button.pack()
 
 
@@ -112,6 +118,9 @@ connect_button.pack(side="left")
 close_button = ttk.Button(root, text="Close Connection", command=ssh_manager.close_connection)
 close_button.pack(side="right")
 
+
 root.mainloop()
 
-threading.Thread(target=get_joint_positions, daemon=True).start() #LEARN THIS SHIT IS SLOWING ME THE FUCK DOWN
+# Remove the redundant thread start
+# threading.Thread(target=start_updating, daemon=True).start()
+# threading.Thread(target=update_status_gui, daemon=True).start()
