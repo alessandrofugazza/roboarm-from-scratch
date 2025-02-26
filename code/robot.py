@@ -196,6 +196,7 @@ class Robot:
 
         for position in range(start_step, end_step, step):
             self._pwm.setPWM(self.joint_channels[joint], 0, position)
+            self.current_joint_positions[joint] = convert_steps_to_absolute_degrees(position)
             sleep(self.gen_ovr)
         self._pwm.setPWM(self.joint_channels[joint], 0, end_step)
 
@@ -258,14 +259,14 @@ class Robot:
         self.show_current_positions()
 
     def return_status(self):
-        return json.dumps({
+        status = {
             'incremental_jog': self.incremental_jog,
             'j1': self.current_joint_positions[0],
             'j2': self.current_joint_positions[1],
             'j3': self.current_joint_positions[2]
-        })
-        # return self.current_joint_positions
-
+        }
+        print(json.dumps(status))  # Ensure this prints a valid JSON string
+        return json.dumps(status)
 
     def move_joint_incremental(self, joint, direction):
         if self.mip:
@@ -326,4 +327,4 @@ class Robot:
     #         print(f'LEFT {ld}\tRIGHT {rd}')
     #         time.sleep(frequency)
 
-    
+

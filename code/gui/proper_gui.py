@@ -114,4 +114,4 @@ close_button.pack(side="right")
 
 root.mainloop()
 
-threading.Thread(target=get_joint_positions, daemon=True).start()
+threading.Thread(target=get_joint_positions, daemon=True).start() #LEARN THIS SHIT IS SLOWING ME THE FUCK DOWN
