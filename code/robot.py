@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import time
 from Raspi_MotorHAT.Raspi_PWM_Servo_Driver import PWM 
 # from servos import Servos
@@ -83,6 +84,7 @@ class Robot:
         self.incremental_jog = 10
         self.is_incremental_jog = False
         self.gen_ovr = 0.1 # tweak this shit
+        self.mip = False
         
         # self.servos = Servos(addr=pwm_addr)
 
@@ -202,6 +204,7 @@ class Robot:
         self.show_current_positions()
 
     def joint_movement(self, target_positions):
+        # todo fix this sh
         print("JOINT MOVEMENT")
         print_separator()
 
@@ -261,15 +264,24 @@ class Robot:
             'j2': self.current_joint_positions[1],
             'j3': self.current_joint_positions[2]
         })
+        # return self.current_joint_positions
 
 
     def move_joint_incremental(self, joint, direction):
-        print("MOVING JOINT INCREMENTAL")
-        print_separator()
-        change = direction * self.incremental_jog
-        self.move_joint_relative(joint, change)
-        print_done()
-        self.show_current_positions()
+        if self.mip:
+            print("Movement already in progress.")
+            return
+        def movement_task():
+            self.mip = True
+            print("MOVING JOINT INCREMENTAL")
+            print_separator()
+            change = direction * self.incremental_jog
+            self.move_joint_relative(joint, change)
+            print_done()
+            self.show_current_positions()
+            self.mip = False
+        threading.Thread(target=movement_task, daemon=True).start()
+
 
     def stroke_end(self, value):
         return value < -89 or value > 89

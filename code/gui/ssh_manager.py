@@ -32,11 +32,11 @@ class SSHClientManager:
     def get_data(self, command):
         if self.shell:
             self.shell.send(command + "\n")
-            
+            # while not self.shell.recv_ready():
+            #     time.sleep(0.1)  # Polling until output is ready
             output = ""
             while not self.shell.recv_ready():
                 time.sleep(0.1)  # Polling until output is ready
-
             output = self.shell.recv(4096).decode().strip()
             # Regex to extract JSON block
             json_match = re.search(r'\{.*\}', output)
