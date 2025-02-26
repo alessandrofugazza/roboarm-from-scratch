@@ -31,6 +31,8 @@ J1_CH = 0
 J2_CH = 2
 J3_CH = 4
 
+NUMBER_OF_JOINTS = 3
+
 HOME_J1 = 0
 HOME_J2 = -48
 HOME_J3 = 50
@@ -63,11 +65,11 @@ class Robot:
             'J2',
             'J3'
         )
-        self.joint_channels = (
-            J1_CH,
-            J2_CH,
-            J3_CH
-        )
+        self.joint_channels = {
+            0: J1_CH,
+            1: J2_CH,
+            2: J3_CH
+        }
         
         self.active_joint = {
             'name': None,
@@ -88,7 +90,7 @@ class Robot:
         
         # self.servos = Servos(addr=pwm_addr)
 
-        for i, _ in enumerate(self.joint_channels):
+        for i in self.joint_channels.keys():
             self._pwm.setPWM(self.joint_channels[i], 0, convert_absolute_degrees_to_steps(self.home_joint_values[i]))
 
         self.current_joint_positions = [
@@ -101,20 +103,20 @@ class Robot:
 
     
 
-    def set_active_joint(self, joint_index):
-        print(f"SETTING JOINT {joint_index+1}")
-        print_separator()
-        self.active_joint['name'] = self.joint_names[joint_index]
-        self.active_joint['index'] = joint_index
-        self.active_joint['channel'] = self.joint_channels[joint_index]
-        self.active_joint['position'] = self.current_joint_positions[joint_index]
-        print_done()
+    # def set_active_joint(self, joint_index):
+    #     print(f"SETTING JOINT {joint_index+1}")
+    #     print_separator()
+    #     self.active_joint['name'] = self.joint_names[joint_index]
+    #     self.active_joint['index'] = joint_index
+    #     self.active_joint['channel'] = self.joint_channels[joint_index]
+    #     self.active_joint['position'] = self.current_joint_positions[joint_index]
+    #     print_done()
 
 
     def stop_all_servos(self):
         print("STOPPING ALL SERVOS")
         print_separator()
-        for joint in self.joint_channels:
+        for joint in self.joint_channels.values():
             self._pwm.setPWM(joint, 0, OFF_STEPS_VALUE)
         print_done()
                 
@@ -169,7 +171,7 @@ class Robot:
     def go_cal_sys(self):
         print("GOING CAL SYS")
         print_separator()
-        for channel in self.joint_channels:
+        for channel in self.joint_channels.values():
             self._pwm.setPWM(channel, 0, convert_absolute_degrees_to_steps(0))
         self.current_joint_positions = [0, 0, 0]
         print_done()
@@ -205,42 +207,62 @@ class Robot:
         self.show_current_positions()
 
     def joint_movement(self, target_positions):
-        # todo fix this sh
-        print("JOINT MOVEMENT")
-        print_separator()
+        def movement_task():
+            # todo fix this sh
+            print("JOINT MOVEMENT")
+            print_separator()
 
-        DEGREES_PER_STEP = 2
-        diffs = []
-        for i in range(len(self.joint_channels)):
-            diffs.append(abs(target_positions[i] - self.current_joint_positions[i]))
+            DEGREES_PER_STEP = 2
+            # store the absolute difference between each target and each current position of the joints
+            diffs = []
+            # store the direction of the movement for each joint
+            directions = []
 
-        steps_needed = max(diffs) / DEGREES_PER_STEP
+            # CHECK constant conversion with self.joint_channels.keys() doesnt seem right
+            for joint in self.joint_channels.keys():
+                diffs.append(abs(target_positions[joint] - self.current_joint_positions[joint]))
+                directions.append(1 if target_positions[joint] > self.current_joint_positions[joint] else -1)
 
-        deg_steps = []
+            # how many steps are needed to span the biggest diff according to speed determined by deg_per_step
+            # TODO make this related to gen_ovr
+            steps_needed = max(diffs) / DEGREES_PER_STEP
 
-        for i in range(len(self.joint_channels)):
-            deg_steps.append((diffs[i] / steps_needed))
+            # store the degrees spanned by each joint in each step
+            deg_steps = []
 
-        directions = []
+            for joint in self.joint_channels.keys():
+                deg_steps.append((diffs[joint] / steps_needed))
 
-        for i in range(len(self.joint_channels)):
-            directions.append(1 if target_positions[i] > self.current_joint_positions[i] else -1)
+            # synced movement
+            for _ in range(int(steps_needed)):
+                for joint in self.joint_channels.keys():
+                    target = self.current_joint_positions[joint] + deg_steps[joint] * directions[joint]
+                    self.servo_to_target_in_degrees(joint, target)
+                sleep(self.gen_ovr)
 
-        for _ in range(int(steps_needed)):
-            for index in range(len(self.joint_channels)):
-                self.current_joint_positions[index] += deg_steps[index] * directions[index]
-                self._pwm.setPWM(self.joint_channels[index], 0, convert_absolute_degrees_to_steps(self.current_joint_positions[index]))
-            sleep(self.gen_ovr)
-
-        for index in range(len(self.joint_channels)):
-            self._pwm.setPWM(self.joint_channels[index], 0, convert_absolute_degrees_to_steps(target_positions[index]))
-        
-        print_done()
-        self.show_current_positions()
+            # reach teh actual target with last step
+            for joint in self.joint_channels.keys():
+                self.servo_to_target_in_degrees(joint, target_positions[joint])
+            
+            print_done()
+            self.show_current_positions()
+        threading.Thread(target=movement_task, daemon=True).start()
 
     # def toggle_incremental_jog(self):
     #     self.is_incremental_jog = not self.is_incremental_jog
     #     print(f"INCREMENTAL JOG IS {self.is_incremental_jog}")
+
+    def servo_to_target_in_degrees(self, joint, target):
+        
+        # does this actually do anything?
+        # if self.mip:
+        #     print("Movement already in progress.")
+        #     return
+            
+            # IMPROVE use steps directly?
+        self._pwm.setPWM(self.joint_channels[joint], 0, convert_absolute_degrees_to_steps(target))
+        self.current_joint_positions[joint] = target
+
 
     def set_incremental_jog(self, value):
         if 0 < value <= 90:
@@ -258,6 +280,7 @@ class Robot:
         # print(f"GEN_OVR IS {self.gen_ovr}%")
         self.show_current_positions()
 
+    # IMPROVE look into sockets
     def return_status(self):
         status = {
             'incremental_jog': self.incremental_jog,
@@ -269,18 +292,29 @@ class Robot:
         return json.dumps(status)
 
     def move_joint_incremental(self, joint, direction):
-        if self.mip:
-            print("Movement already in progress.")
-            return
         def movement_task():
-            self.mip = True
             print("MOVING JOINT INCREMENTAL")
             print_separator()
-            change = direction * self.incremental_jog
-            self.move_joint_relative(joint, change)
+            # CHECK why do i bother with direction again?
+            current_position = self.current_joint_positions[joint]
+            change = self.incremental_jog * direction
+            target = current_position + change
+
+            # CHECK using directgion logic twice?
+
+            if target > current_position:
+                step = 2
+            else:
+                step = -2
+
+            for position in range(current_position, target, step):
+                self.servo_to_target_in_degrees(joint, position)
+                sleep(self.gen_ovr)
+            self.servo_to_target_in_degrees(joint, target)
+
             print_done()
+
             self.show_current_positions()
-            self.mip = False
         threading.Thread(target=movement_task, daemon=True).start()
 
 
