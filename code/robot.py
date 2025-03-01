@@ -259,7 +259,7 @@ class Robot:
         #     print("Movement already in progress.")
         #     return
             
-            # IMPROVE use steps directly?
+        # IMPROVE use steps directly?
         self._pwm.setPWM(self.joint_channels[joint], 0, convert_absolute_degrees_to_steps(target))
         self.current_joint_positions[joint] = target
 
@@ -288,7 +288,7 @@ class Robot:
             'j2': self.current_joint_positions[1],
             'j3': self.current_joint_positions[2]
         }
-        print(json.dumps(status))  # Ensure this prints a valid JSON string
+        print(json.dumps(status))  
         return json.dumps(status)
 
     def move_joint_incremental(self, joint, direction):
@@ -300,8 +300,7 @@ class Robot:
             change = self.incremental_jog * direction
             target = current_position + change
 
-            # CHECK using directgion logic twice?
-
+            # CHECK using direction logic twice?
             if target > current_position:
                 step = 2
             else:
