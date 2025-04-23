@@ -17,7 +17,7 @@ import atexit
 PWM_ADDR = 0x40
 PWM_FREQUENCY = 50
 SERVO_MID_POINT_MS = 1.5
-DEFLECT_90_IN_MS = 1
+DEFLECT_90_IN_MS = 0.69
 
 PERIOD_IN_MS = 1000 / PWM_FREQUENCY
 PULSE_STEPS = 4096
@@ -27,15 +27,21 @@ STEPS_PER_MS = PULSE_STEPS / PERIOD_IN_MS
 STEPS_PER_DEGREE = (DEFLECT_90_IN_MS * STEPS_PER_MS) / 90
 SERVO_MID_POINT_STEPS = SERVO_MID_POINT_MS * STEPS_PER_MS
 
-J1_CH = 0
-J2_CH = 2
-J3_CH = 4
+J1_CH = 15
+J2_CH = 13
+J3_CH = 11
+J4_CH = 9
+J5_CH = 7
+J6_CH = 5
 
-NUMBER_OF_JOINTS = 3
+NUMBER_OF_JOINTS = 6
 
 HOME_J1 = 0
-HOME_J2 = -48
-HOME_J3 = 50
+HOME_J2 = -2
+HOME_J3 = -6
+HOME_J4 = 135
+HOME_J5 = 0
+HOME_J6 = 0
 
 def convert_absolute_degrees_to_steps(position): 
     return int(SERVO_MID_POINT_STEPS + (position * STEPS_PER_DEGREE))
@@ -63,12 +69,18 @@ class Robot:
         self.joint_names = (
             'J1',
             'J2',
-            'J3'
+            'J3',
+            'J4',
+            'J5',
+            'J6'
         )
         self.joint_channels = {
             0: J1_CH,
             1: J2_CH,
-            2: J3_CH
+            2: J3_CH,
+            3: J4_CH,
+            4: J5_CH,
+            5: J6_CH
         }
         
         self.active_joint = {
@@ -80,7 +92,10 @@ class Robot:
         self.home_joint_values = (
             HOME_J1,
             HOME_J2,
-            HOME_J3
+            HOME_J3,
+            HOME_J4,
+            HOME_J5,
+            HOME_J6,
         )
         self._pwm.setPWMFreq(PWM_FREQUENCY)
         self.incremental_jog = 10
@@ -96,7 +111,10 @@ class Robot:
         self.current_joint_positions = [
             self.home_joint_values[0],
             self.home_joint_values[1],
-            self.home_joint_values[2]
+            self.home_joint_values[2],
+            self.home_joint_values[3],
+            self.home_joint_values[4],
+            self.home_joint_values[5],
         ]
         
         atexit.register(self.stop_all)
@@ -164,7 +182,7 @@ class Robot:
     def go_zero(self):
         print("GOING ZERO")
         print_separator()
-        self.joint_movement([0, 0, 0])
+        self.joint_movement(self.home_joint_values)
         print_done()
         self.show_current_positions()
 
@@ -173,7 +191,7 @@ class Robot:
         print_separator()
         for channel in self.joint_channels.values():
             self._pwm.setPWM(channel, 0, convert_absolute_degrees_to_steps(0))
-        self.current_joint_positions = [0, 0, 0]
+        self.current_joint_positions = self.home_joint_values
         print_done()
 
     # def move_joint_absolute(self, joint, position):
@@ -212,7 +230,7 @@ class Robot:
             print("JOINT MOVEMENT")
             print_separator()
 
-            DEGREES_PER_STEP = 2
+            DEGREES_PER_STEP = 1
             # store the absolute difference between each target and each current position of the joints
             diffs = []
             # store the direction of the movement for each joint
@@ -286,7 +304,10 @@ class Robot:
             'incremental_jog': self.incremental_jog,
             'j1': self.current_joint_positions[0],
             'j2': self.current_joint_positions[1],
-            'j3': self.current_joint_positions[2]
+            'j3': self.current_joint_positions[2],
+            'j4': self.current_joint_positions[3],
+            'j5': self.current_joint_positions[4],
+            'j6': self.current_joint_positions[5],
         }
         print(json.dumps(status))  
         return json.dumps(status)
@@ -302,9 +323,9 @@ class Robot:
 
             # CHECK using direction logic twice?
             if target > current_position:
-                step = 2
+                step = 1
             else:
-                step = -2
+                step = -1
 
             for position in range(current_position, target, step):
                 self.servo_to_target_in_degrees(joint, position)
@@ -318,7 +339,7 @@ class Robot:
 
 
     def stroke_end(self, value):
-        return value < -89 or value > 89
+        return value < -270 or value > 270
     
 
 

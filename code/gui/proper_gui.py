@@ -16,7 +16,7 @@ ssh_manager = SSHClientManager()
 
 
 root = tk.Tk()
-root.geometry("800x600")
+root.geometry("900x900")
 root.title("A3A")
 
 
@@ -31,6 +31,9 @@ def update_status_gui():
         j1_position.set(status.get('j1', 'N/A'))
         j2_position.set(status.get('j2', 'N/A'))
         j3_position.set(status.get('j3', 'N/A'))
+        j4_position.set(status.get('j4', 'N/A'))
+        j5_position.set(status.get('j5', 'N/A'))
+        j6_position.set(status.get('j6', 'N/A'))
     else:
         print("No status received.")
     
@@ -39,8 +42,11 @@ def update_status_gui():
 
 incremental_jog = tk.StringVar(value="10") # get this from a3a
 j1_position = tk.StringVar(value="0")
-j2_position = tk.StringVar(value="0")
-j3_position = tk.StringVar(value="0")
+j2_position = tk.StringVar(value="-2")
+j3_position = tk.StringVar(value="-6")
+j4_position = tk.StringVar(value="135")
+j5_position = tk.StringVar(value="0")
+j6_position = tk.StringVar(value="0")
 shitty_joint_positions = tk.StringVar(value="shitty")
 
 incremental_jog_frame = ttk.Frame(root)
@@ -53,7 +59,7 @@ incremental_jog_entry.pack(side="right")
 
 
 
-for i, joint in enumerate(['J1', 'J2', 'J3'], start=1):
+for i, joint in enumerate(['J1', 'J2', 'J3', 'J4', 'J5', 'J6'], start=1):
     frame = ttk.Frame(root, padding=(20, 10, 20, 0))
     frame.pack(fill="both")
     
@@ -94,6 +100,21 @@ execute_button = ttk.Button(frame, text=f"J3 -", command=lambda: ssh_manager.sen
 execute_button.grid(row=2, column=0)
 execute_button = ttk.Button(frame, text=f"J3 +", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(2, 1)'))
 execute_button.grid(row=2, column=1)
+
+execute_button = ttk.Button(frame, text=f"J4 -", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(3, -1)'))
+execute_button.grid(row=3, column=0)
+execute_button = ttk.Button(frame, text=f"J4 +", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(3, 1)'))
+execute_button.grid(row=3, column=1)
+
+execute_button = ttk.Button(frame, text=f"J5 -", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(4, -1)'))
+execute_button.grid(row=4, column=0)
+execute_button = ttk.Button(frame, text=f"J5 +", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(4, 1)'))
+execute_button.grid(row=4, column=1)
+
+execute_button = ttk.Button(frame, text=f"J6 -", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(5, -1)'))
+execute_button.grid(row=5, column=0)
+execute_button = ttk.Button(frame, text=f"J6 +", command=lambda: ssh_manager.send_command('a3a.move_joint_incremental(5, 1)'))
+execute_button.grid(row=5, column=1)
 
 # frame = ttk.Frame(root).pack()
 

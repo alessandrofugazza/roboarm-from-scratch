@@ -24,14 +24,18 @@ servo_mid_point_steps = servo_mid_point_ms * steps_per_ms
 def convert_degrees_to_steps(position): 
     return int(servo_mid_point_steps + (position * steps_per_degree))
 
-# servo_channels = [13, 15]
-servo_channel = 15
+
+servo_channels = [15, 13, 11, 9, 7, 5]
+
 
 def turn_off_servos():
     pwm.setPWM(servo_channel, 0, 4096)
 
 atexit.register(turn_off_servos)
 
+servo_channel = int(input(f"Select a servo channel from the available channels {servo_channels}: "))
+if servo_channel not in servo_channels:
+    raise ValueError(f"Invalid channel selected. Please choose from {servo_channels}.")
 
 servo_channel, 0, convert_degrees_to_steps(0)
 
